@@ -105,8 +105,9 @@
     const lo = toInt(from);
     const hi = toInt(to);
     if (!Number.isInteger(lo) || !Number.isInteger(hi)) return [];
-    const start = Math.min(lo, hi);
-    const end = Math.max(lo, hi);
+    if (lo > hi) return [];
+    const start = lo;
+    const end = hi;
     const isSquare = k === 'square';
     const mark = isSquare ? '²' : '³';
     const formats = f === 'mixed' ? ['direct', 'reverse'] : [f];

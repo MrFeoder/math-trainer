@@ -167,12 +167,21 @@
     }
   }
 
+  function clearFeedback() {
+    if (round && round.feedbackId) {
+      clearTimeout(round.feedbackId);
+      round.feedbackId = 0;
+    }
+  }
+
   function clearChildren(element) {
     element.innerHTML = '';
   }
 
   function startRound() {
     if (!renderMessages()) return;
+    stopTimer();
+    clearFeedback();
     var s = readForm();
     settings[activeKind] = s;
     saveSettings(activeKind);
@@ -188,6 +197,7 @@
       mistakes: [],
       startedAt: Date.now(),
       timerId: 0,
+      feedbackId: 0,
       phase: 'idle',
       running: true,
       question: null
@@ -310,13 +320,15 @@
     els.answerHint.textContent = ok ? '' : 'Правильный ответ: ' + q.answer;
     setAnswerDisabled(true);
 
-    setTimeout(function () {
+    var myRound = round;
+    round.feedbackId = setTimeout(function () {
+      if (round !== myRound) return;
       nextTurn();
     }, FEEDBACK_DELAY);
   }
-
   function finishRound() {
     stopTimer();
+    clearFeedback();
     round.running = false;
     round.phase = 'done';
 
@@ -332,7 +344,12 @@
     var stored = storageGet(key);
     if (stored) {
       try {
-        previous = JSON.parse(stored);
+        var parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object' &&
+            Number.isFinite(parsed.correct) && Number.isFinite(parsed.total) &&
+            Number.isFinite(parsed.seconds)) {
+          previous = parsed;
+        }
       } catch (error) {
         previous = null;
       }
@@ -366,6 +383,7 @@
 
   function quitRound() {
     stopTimer();
+    clearFeedback();
     if (round) round.running = false;
     round = null;
     els.answerHint.textContent = '';
@@ -381,6 +399,7 @@
     activeKind = kind;
     updateTabs();
     renderSettings(activeKind);
+    applyTheme(settings[activeKind].profile);
     renderMessages();
     showScreen('settings');
   }
@@ -441,6 +460,7 @@
     settings.square = loadSettings('square');
     settings.cube = loadSettings('cube');
     els.profile.value = settings[activeKind].profile;
+    storageSet(PROFILE_KEY, settings[activeKind].profile);
     applyTheme(settings[activeKind].profile);
     updateTabs();
     renderSettings(activeKind);

@@ -96,6 +96,7 @@ function createApp(options) {
 
   const timeouts = [];
   const intervals = [];
+  let timeoutsRan = 0;
 
   const store = {};
   const localStorage = {
@@ -140,10 +141,10 @@ function createApp(options) {
     Object: Object,
     parseInt: parseInt,
     isNaN: isNaN,
-    setInterval: function (fn, delay) { intervals.push({ fn: fn, delay: delay }); return intervals.length; },
-    clearInterval: function (id) { if (id) intervals[id - 1].cleared = true; },
-    setTimeout: function (fn, delay) { timeouts.push({ fn: fn, delay: delay }); return timeouts.length; },
-    clearTimeout: function (id) { if (id) timeouts[id - 1].cleared = true; }
+    setInterval: function (fn, delay) { intervals.push({ fn: fn, delay: delay, cleared: false }); return intervals.length; },
+    clearInterval: function (id) { var t = intervals[id - 1]; if (t) t.cleared = true; },
+    setTimeout: function (fn, delay) { timeouts.push({ fn: fn, delay: delay, cleared: false }); return timeouts.length; },
+    clearTimeout: function (id) { var t = timeouts[id - 1]; if (t) t.cleared = true; }
   };
 
   vm.createContext(sandbox);
@@ -158,8 +159,9 @@ function createApp(options) {
     fire: function (id, type, event) { registry[id].dispatch(type, event); },
     click: function (id) { registry[id].click(); },
     runTimers: function () {
-      while (timeouts.length) {
-        const timer = timeouts.shift();
+      while (timeoutsRan < timeouts.length) {
+        const timer = timeouts[timeoutsRan];
+        timeoutsRan += 1;
         if (!timer.cleared) timer.fn();
       }
     }
@@ -188,6 +190,7 @@ test('стартовое состояние: настройки видны, кв
   assert.equal(app.dom.from.value, 1);
   assert.equal(app.dom.to.value, 20);
   assert.equal(app.store['mt.settings.square'] !== undefined, true);
+  assert.equal(app.store['mt.profile'], 'kid', 'профиль записывается сразу при первом запуске');
 });
 
 test('ошибки настроек выводятся, «Начать» блокируется, предупреждение не блокирует', () => {
@@ -392,6 +395,45 @@ test('в поле ответа отбрасываются нецифровые �
   app.dom['answer-input'].value = '1a2b3';
   app.fire('answer-input', 'input', { type: 'input' });
   assert.equal(app.dom['answer-input'].value, '123');
+});
+
+test('быстрый «Прервать» + «Начать» не пропускает первый вопрос нового раунда', () => {
+  const app = createApp();
+  app.dom['round-length'].value = 3;
+  app.dom.from.value = 1;
+  app.dom.to.value = 3;
+  app.fire('from', 'change');
+  app.app.startRound();
+
+  const q1 = app.app.getState().round.question;
+  app.app.submitAnswer(String(q1.answer));
+  app.click('quit-btn');
+  app.app.startRound();
+
+  app.runTimers();
+
+  assert.equal(
+    app.app.getState().round.index,
+    1,
+    'зависший таймер прошлого раунда не должен перескакивать первый вопрос'
+  );
+  assert.equal(app.app.getState().round.phase, 'answering');
+});
+
+test('смена тренажёра приводит тему в соответствие с профилем видимого селектора', () => {
+  const app = createApp();
+  app.dom.profile.value = 'adult';
+  app.app.onProfileChange();
+  assert.equal(app.body.classList.contains('theme-adult'), true);
+
+  app.app.switchKind('cube');
+
+  assert.equal(app.dom.profile.value, app.app.getState().settings.cube.profile);
+  assert.equal(
+    app.body.classList.contains('theme-' + app.app.getState().settings.cube.profile),
+    true,
+    'тема обязана совпадать с профилем, показанным в селекторе'
+  );
 });
 
 test('кнопка «Прервать» возвращает в настройки и не пишет лучший результат', () => {

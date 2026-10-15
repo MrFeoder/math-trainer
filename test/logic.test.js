@@ -122,6 +122,11 @@ test('buildPool: вырожденный диапазон 1..1 и 20..20', () => 
   assert.equal(MT.buildPool('square', 20, 20, 'direct').length, 1);
 });
 
+test('buildPool: перевёрнутый диапазон не «угадывает» и даёт пустой пул', () => {
+  assert.deepEqual(MT.buildPool('square', 5, 2, 'direct'), []);
+  assert.deepEqual(MT.buildPool('cube', 10, 1, 'mixed'), []);
+});
+
 test('shuffle: возвращает новый массив с теми же элементами', () => {
   const src = [1, 2, 3, 4, 5];
   const out = MT.shuffle(src);

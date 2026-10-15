@@ -154,19 +154,6 @@ select {
   color: var(--muted);
 }
 
-.radio {
-  display: block;
-  padding: 0.4rem 0;
-  cursor: pointer;
-}
-
-.radio input {
-  width: 20px;
-  height: 20px;
-  vertical-align: -3px;
-  margin-right: 0.4rem;
-}
-
 button.primary {
   min-height: 48px;
   width: 100%;
@@ -358,14 +345,6 @@ select:focus-visible,
 
 .hidden {
   display: none;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }
 
 @media (max-width: 600px) {
