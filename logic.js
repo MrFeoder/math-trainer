@@ -186,6 +186,37 @@
     return parsed === question.answer;
   }
 
+  function formatTime(seconds) {
+    const s = Math.floor(seconds);
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function summarize(round) {
+    const r = round && typeof round === 'object' ? round : {};
+    const total = Number.isFinite(r.total) ? r.total : 0;
+    const correct = Number.isFinite(r.correct) ? r.correct : 0;
+    const seconds = Number.isFinite(r.seconds) ? r.seconds : 0;
+    return {
+      total: total,
+      correct: correct,
+      percent: total > 0 ? Math.round(correct / total * 100) : 0,
+      seconds: seconds,
+      secondsText: formatTime(seconds),
+      mistakes: Array.isArray(r.mistakes) ? r.mistakes : []
+    };
+  }
+
+  function bestKey(settings) {
+    const s = settings && typeof settings === 'object' ? settings : {};
+    return 'mt.best.' + s.kind + '.' + s.format + '.' + s.answerType + '.' + s.from + '-' + s.to;
+  }
+
+  function isBetter(a, b) {
+    if (!b) return true;
+    if (a.correct !== b.correct) return a.correct > b.correct;
+    return a.seconds < b.seconds;
+  }
+
   function normalizeSettings(raw, kind) {
     const k = KINDS.indexOf(kind) !== -1 ? kind : 'square';
     const def = defaultsFor(k);
@@ -224,6 +255,10 @@
     buildPool: buildPool,
     nextQuestion: nextQuestion,
     makeChoices: makeChoices,
-    checkAnswer: checkAnswer
+    checkAnswer: checkAnswer,
+    summarize: summarize,
+    formatTime: formatTime,
+    bestKey: bestKey,
+    isBetter: isBetter
   };
 });

@@ -252,3 +252,52 @@ test('checkAnswer: обратный вопрос и ноль', () => {
   assert.equal(MT.checkAnswer(q, '5'), true);
   assert.equal(MT.checkAnswer(q, '0'), false);
 });
+
+test('summarize: проценты, время и разбор ошибок', () => {
+  const r = MT.summarize({
+    total: 10,
+    correct: 7,
+    seconds: 65,
+    mistakes: [{ prompt: '5² = ?', given: '20', answer: 25 }]
+  });
+  assert.equal(r.total, 10);
+  assert.equal(r.correct, 7);
+  assert.equal(r.percent, 70);
+  assert.equal(r.secondsText, '01:05');
+  assert.deepEqual(r.mistakes, [{ prompt: '5² = ?', given: '20', answer: 25 }]);
+});
+
+test('summarize: не падает при нуле вопросов', () => {
+  const r = MT.summarize({ total: 0, correct: 0, seconds: 0, mistakes: [] });
+  assert.equal(r.percent, 0);
+  assert.equal(r.secondsText, '00:00');
+});
+
+test('summarize: округление процента', () => {
+  assert.equal(MT.summarize({ total: 3, correct: 2, seconds: 1, mistakes: [] }).percent, 67);
+});
+
+test('formatTime: границы', () => {
+  assert.equal(MT.formatTime(0), '00:00');
+  assert.equal(MT.formatTime(5), '00:05');
+  assert.equal(MT.formatTime(59), '00:59');
+  assert.equal(MT.formatTime(60), '01:00');
+  assert.equal(MT.formatTime(3600), '60:00');
+});
+
+test('bestKey: ключ зависит от вида, формата, типа ответа и диапазона', () => {
+  assert.equal(MT.bestKey(base), 'mt.best.square.mixed.input.1-20');
+  assert.equal(
+    MT.bestKey({ ...base, kind: 'cube', format: 'reverse', answerType: 'choice', from: 1, to: 10 }),
+    'mt.best.cube.reverse.choice.1-10'
+  );
+});
+
+test('isBetter: больше верных лучше, при равенстве — быстрее', () => {
+  assert.equal(MT.isBetter({ correct: 5, seconds: 30 }, null), true);
+  assert.equal(MT.isBetter({ correct: 5, seconds: 30 }, undefined), true);
+  assert.equal(MT.isBetter({ correct: 6, seconds: 90 }, { correct: 5, seconds: 10 }), true);
+  assert.equal(MT.isBetter({ correct: 4, seconds: 5 }, { correct: 5, seconds: 10 }), false);
+  assert.equal(MT.isBetter({ correct: 5, seconds: 5 }, { correct: 5, seconds: 10 }), true);
+  assert.equal(MT.isBetter({ correct: 5, seconds: 10 }, { correct: 5, seconds: 10 }), false);
+});
