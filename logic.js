@@ -84,6 +84,71 @@
     return { ok: errors.length === 0, errors: errors, warnings: warnings };
   }
 
+  function questionKey(question) {
+    return question.format + ':' + question.n;
+  }
+
+  function shuffle(array) {
+    const out = array.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = out[i];
+      out[i] = out[j];
+      out[j] = tmp;
+    }
+    return out;
+  }
+
+  function buildPool(kind, from, to, format) {
+    const k = KINDS.indexOf(kind) !== -1 ? kind : 'square';
+    const f = FORMATS.indexOf(format) !== -1 ? format : 'mixed';
+    const lo = toInt(from);
+    const hi = toInt(to);
+    if (!Number.isInteger(lo) || !Number.isInteger(hi)) return [];
+    const start = Math.min(lo, hi);
+    const end = Math.max(lo, hi);
+    const isSquare = k === 'square';
+    const mark = isSquare ? '²' : '³';
+    const formats = f === 'mixed' ? ['direct', 'reverse'] : [f];
+    const pool = [];
+    for (let i = 0; i < formats.length; i++) {
+      const fmt = formats[i];
+      for (let n = start; n <= end; n++) {
+        const value = isSquare ? n * n : n * n * n;
+        pool.push({
+          kind: k,
+          n: n,
+          format: fmt,
+          prompt: fmt === 'direct' ? n + mark + ' = ?' : value + ' = ?' + mark,
+          answer: fmt === 'direct' ? value : n
+        });
+      }
+    }
+    return pool;
+  }
+
+  function nextQuestion(pool, usedKeys, lastKey) {
+    const used = Array.isArray(usedKeys) ? usedKeys : [];
+    const available = pool.filter(function (q) {
+      const key = questionKey(q);
+      return used.indexOf(key) === -1 && key !== lastKey;
+    });
+    if (available.length > 0) {
+      return {
+        question: available[Math.floor(Math.random() * available.length)],
+        exhausted: false
+      };
+    }
+    let fallback = pool.filter(function (q) {
+      return questionKey(q) !== lastKey || pool.length === 1;
+    });
+    if (fallback.length === 0) fallback = pool;
+    return {
+      question: fallback[Math.floor(Math.random() * fallback.length)],
+      exhausted: true
+    };
+  }
+
   function normalizeSettings(raw, kind) {
     const k = KINDS.indexOf(kind) !== -1 ? kind : 'square';
     const def = defaultsFor(k);
@@ -116,6 +181,10 @@
     defaultsFor: defaultsFor,
     applyProfile: applyProfile,
     validateSettings: validateSettings,
-    normalizeSettings: normalizeSettings
+    normalizeSettings: normalizeSettings,
+    questionKey: questionKey,
+    shuffle: shuffle,
+    buildPool: buildPool,
+    nextQuestion: nextQuestion
   };
 });
