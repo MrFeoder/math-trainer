@@ -149,6 +149,43 @@
     };
   }
 
+  function makeChoices(question, count) {
+    const total = Number.isInteger(count) && count > 1 ? count : 4;
+    const n = question.n;
+    const value = question.answer;
+    const p = question.kind === 'square' ? 2 : 3;
+    const candidates = question.format === 'direct'
+      ? [
+          value + n, value - n,
+          Math.pow(n + 1, p), Math.pow(n - 1, p),
+          Math.pow(n + 2, p), Math.pow(n - 2, p),
+          value + 2 * n, value - 2 * n
+        ]
+      : [n + 1, n - 1, n + 2, n - 2, n + 3, n - 3];
+
+    const unique = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const c = candidates[i];
+      if (Number.isInteger(c) && c > 0 && c !== value && unique.indexOf(c) === -1) unique.push(c);
+    }
+
+    const distractors = shuffle(unique).slice(0, total - 1);
+    let k = 1;
+    while (distractors.length < total - 1 && k <= 1000) {
+      const c = value + k;
+      if (c > 0 && c !== value && distractors.indexOf(c) === -1) distractors.push(c);
+      k++;
+    }
+
+    return shuffle([value].concat(distractors));
+  }
+
+  function checkAnswer(question, given) {
+    const parsed = toInt(given);
+    if (!Number.isInteger(parsed)) return false;
+    return parsed === question.answer;
+  }
+
   function normalizeSettings(raw, kind) {
     const k = KINDS.indexOf(kind) !== -1 ? kind : 'square';
     const def = defaultsFor(k);
@@ -185,6 +222,8 @@
     questionKey: questionKey,
     shuffle: shuffle,
     buildPool: buildPool,
-    nextQuestion: nextQuestion
+    nextQuestion: nextQuestion,
+    makeChoices: makeChoices,
+    checkAnswer: checkAnswer
   };
 });

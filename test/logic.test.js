@@ -173,3 +173,82 @@ test('nextQuestion: каждый вопрос пула рано или позд�
   }
   assert.equal(seen.size, 3);
 });
+
+const correctCount = (choices, answer) => choices.filter(c => c === answer).length;
+
+test('makeChoices: прямой квадрат — 4 уникальных варианта, ровно один верный', () => {
+  const q = MT.buildPool('square', 7, 7, 'direct')[0];
+  const choices = MT.makeChoices(q);
+  assert.equal(choices.length, 4);
+  assert.equal(new Set(choices).size, 4);
+  assert.ok(choices.every(c => Number.isInteger(c) && c > 0));
+  assert.equal(correctCount(choices, 49), 1);
+});
+
+test('makeChoices: прямой куб — верный вариант 27 присутствует', () => {
+  const q = MT.buildPool('cube', 3, 3, 'direct')[0];
+  const choices = MT.makeChoices(q);
+  assert.equal(new Set(choices).size, 4);
+  assert.equal(correctCount(choices, 27), 1);
+});
+
+test('makeChoices: обратный вопрос — дистракторы это соседние основания', () => {
+  const q = MT.buildPool('square', 7, 7, 'reverse')[0];
+  const choices = MT.makeChoices(q);
+  assert.equal(new Set(choices).size, 4);
+  assert.equal(correctCount(choices, 7), 1);
+  assert.ok(choices.every(c => Math.abs(c - 7) <= 3), `варианты: ${choices}`);
+});
+
+test('makeChoices: n=1 в обратном вопросе не даёт нулей и дубликатов', () => {
+  const q = MT.buildPool('square', 1, 1, 'reverse')[0];
+  const choices = MT.makeChoices(q);
+  assert.equal(new Set(choices).size, 4);
+  assert.ok(choices.every(c => c > 0), `варианты: ${choices}`);
+  assert.equal(correctCount(choices, 1), 1);
+});
+
+test('makeChoices: n=1 в прямом вопросе (ответ 1)', () => {
+  const q = MT.buildPool('cube', 1, 1, 'direct')[0];
+  const choices = MT.makeChoices(q);
+  assert.equal(new Set(choices).size, 4);
+  assert.equal(correctCount(choices, 1), 1);
+});
+
+test('makeChoices: варианты всегда уникальны и содержат ответ (перебор диапазона)', () => {
+  for (const kind of ['square', 'cube']) {
+    for (const format of ['direct', 'reverse']) {
+      for (let n = 1; n <= 30; n++) {
+        const q = MT.buildPool(kind, n, n, format)[0];
+        const choices = MT.makeChoices(q);
+        assert.equal(choices.length, 4, `${kind} ${format} n=${n}`);
+        assert.equal(new Set(choices).size, 4, `${kind} ${format} n=${n}: ${choices}`);
+        assert.equal(correctCount(choices, q.answer), 1, `${kind} ${format} n=${n}: ${choices}`);
+        assert.ok(choices.every(c => Number.isInteger(c) && c > 0), `${kind} ${format} n=${n}: ${choices}`);
+      }
+    }
+  }
+});
+
+test('checkAnswer: числовое сравнение и мусор', () => {
+  const q = MT.buildPool('square', 7, 7, 'direct')[0];
+  assert.equal(MT.checkAnswer(q, '49'), true);
+  assert.equal(MT.checkAnswer(q, 49), true);
+  assert.equal(MT.checkAnswer(q, '49.0'), false);
+  assert.equal(MT.checkAnswer(q, '07'), false);
+  assert.equal(MT.checkAnswer(q, ''), false);
+  assert.equal(MT.checkAnswer(q, 'ab'), false);
+  assert.equal(MT.checkAnswer(q, null), false);
+});
+
+test('checkAnswer: ведущий ноль не мешает («07» равно 7)', () => {
+  const q = MT.buildPool('square', 7, 7, 'reverse')[0];
+  assert.equal(MT.checkAnswer(q, '07'), true);
+  assert.equal(MT.checkAnswer(q, '7'), true);
+});
+
+test('checkAnswer: обратный вопрос и ноль', () => {
+  const q = MT.buildPool('cube', 5, 5, 'reverse')[0];
+  assert.equal(MT.checkAnswer(q, '5'), true);
+  assert.equal(MT.checkAnswer(q, '0'), false);
+});
